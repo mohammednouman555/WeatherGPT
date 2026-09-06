@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <meta
+        name="description"
+        content="WeatherGPT - Hyperlocal Weather Risk and Decision Intelligence"
+    >
+
+    <title>WeatherGPT — Weather Risk Intelligence</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/css/dashboard.css"
+    >
+
+</head>
+
+
+<body>
+
+
+    <!-- =========================================================
+         APP HEADER
+    ========================================================== -->
+
+    <header class="app-header">
+
+        <div class="header-container">
+
+            <div class="brand">
+
+                <div class="brand-icon">
+                    ☁
+                </div>
+
+                <div>
+
+                    <h1>
+                        WeatherGPT
+                    </h1>
+
+                    <p>
+                        Weather Risk Intelligence
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="system-status">
+
+                <span
+                    id="statusDot"
+                    class="status-dot"
+                ></span>
+
+                <span id="statusText">
+                    Checking system...
+                </span>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+
+    <!-- =========================================================
+         MAIN APPLICATION
+    ========================================================== -->
+
+    <main class="dashboard-container">
+
+
+        <!-- =====================================================
+             SEARCH / CONTROL PANEL
+        ====================================================== -->
+
+        <section class="control-panel card">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <span class="eyebrow">
+                        WEATHER ANALYSIS
+                    </span>
+
+                    <h2>
+                        Check weather conditions and risk
+                    </h2>
+
+                    <p>
+                        Select a location, activity and forecast
+                        window to generate a weather-aware decision.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="controls-grid">
+
+
+                <!-- CITY -->
+
+                <div class="control-group city-control">
+
+                    <label for="cityInput">
+                        Location
+                    </label>
+
+                    <div class="input-with-icon">
+
+                        <span>
+                            📍
+                        </span>
+
+                        <input
+                            id="cityInput"
+                            type="text"
+                            value="Hyderabad"
+                            placeholder="Enter city"
+                            autocomplete="off"
+                        >
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- ACTIVITY -->
+
+                <div class="control-group">
+
+                    <label for="activitySelect">
+                        Activity
+                    </label>
+
+                    <select id="activitySelect">
+
+                        <option value="">
+                            General
+                        </option>
+
+                        <option value="walking">
+                            Walking
+                        </option>
+
+                        <option value="running">
+                            Running
+                        </option>
+
+                        <option value="cycling">
+                            Cycling
+                        </option>
+
+                        <option value="bike">
+                            Bike
+                        </option>
+
+                        <option value="driving">
+                            Driving
+                        </option>
+
+                    </select>
+
+                </div>
+
+
+
+                <!-- START -->
+
+                <div class="control-group">
+
+                    <label for="startTime">
+                        Start time
+                    </label>
+
+                    <input
+                        id="startTime"
+                        type="datetime-local"
+                    >
+
+                </div>
+
+
+
+                <!-- END -->
+
+                <div class="control-group">
+
+                    <label for="endTime">
+                        End time
+                    </label>
+
+                    <input
+                        id="endTime"
+                        type="datetime-local"
+                    >
+
+                </div>
+
+            </div>
+
+
+
+            <div class="control-actions">
+
+                <button
+                    id="analyzeButton"
+                    class="primary-button"
+                    type="button"
+                >
+
+                    <span id="buttonText">
+                        Analyze Weather Risk
+                    </span>
+
+                    <span
+                        id="buttonLoader"
+                        class="button-loader hidden"
+                    ></span>
+
+                </button>
+
+            </div>
+
+
+
+            <div
+                id="errorMessage"
+                class="error-message hidden"
+            ></div>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             LOADING
+        ====================================================== -->
+
+        <section
+            id="loadingState"
+            class="loading-state hidden"
+        >
+
+            <div class="loading-spinner"></div>
+
+            <h3>
+                Analyzing weather conditions...
+            </h3>
+
+            <p>
+                Fetching weather data and calculating risk.
+            </p>
+
+        </section>
+
+
+
+        <!-- =====================================================
+             RESULTS
+        ====================================================== -->
+
+        <div
+            id="resultsContainer"
+            class="hidden"
+        >
+
+
+            <!-- =================================================
+                 LOCATION SUMMARY
+            ================================================== -->
+
+            <section class="location-summary">
+
+                <div>
+
+                    <span class="eyebrow">
+                        ANALYSIS LOCATION
+                    </span>
+
+                    <h2 id="locationName">
+                        Hyderabad
+                    </h2>
+
+                    <p id="locationDetails">
+                        Telangana, India
+                    </p>
+
+                </div>
+
+
+                <div class="coordinates">
+
+                    <span>
+                        Latitude
+                    </span>
+
+                    <strong id="latitude">
+                        —
+                    </strong>
+
+
+                    <span>
+                        Longitude
+                    </span>
+
+                    <strong id="longitude">
+                        —
+                    </strong>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 CURRENT WEATHER
+            ================================================== -->
+
+            <section class="section">
+
+                <div class="section-title">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            CURRENT CONDITIONS
+                        </span>
+
+                        <h2>
+                            Current Weather
+                        </h2>
+
+                    </div>
+
+
+                    <span
+                        id="weatherSource"
+                        class="source-badge"
+                    >
+                        —
+                    </span>
+
+                </div>
+
+
+
+                <div class="weather-grid">
+
+
+                    <article class="weather-main card">
+
+                        <div class="weather-condition-icon">
+                            ☁
+                        </div>
+
+                        <div>
+
+                            <span
+                                id="currentCondition"
+                                class="weather-condition"
+                            >
+                                —
+                            </span>
+
+
+                            <div class="temperature">
+
+                                <span id="currentTemperature">
+                                    —
+                                </span>
+
+                                <sup>
+                                    °C
+                                </sup>
+
+                            </div>
+
+
+                            <p>
+
+                                Feels like
+
+                                <strong id="feelsLike">
+                                    —
+                                </strong>
+
+                                °C
+
+                            </p>
+
+                        </div>
+
+                    </article>
+
+
+
+                    <article class="metric-card card">
+
+                        <span class="metric-label">
+                            Humidity
+                        </span>
+
+                        <strong
+                            id="humidity"
+                            class="metric-value"
+                        >
+                            —
+                        </strong>
+
+                        <span class="metric-unit">
+                            %
+                        </span>
+
+                    </article>
+
+
+
+                    <article class="metric-card card">
+
+                        <span class="metric-label">
+                            Wind
+                        </span>
+
+                        <strong
+                            id="windSpeed"
+                            class="metric-value"
+                        >
+                            —
+                        </strong>
+
+                        <span class="metric-unit">
+                            km/h
+                        </span>
+
+                    </article>
+
+
+
+                    <article class="metric-card card">
+
+                        <span class="metric-label">
+                            Rainfall
+                        </span>
+
+                        <strong
+                            id="rainfall"
+                            class="metric-value"
+                        >
+                            —
+                        </strong>
+
+                        <span class="metric-unit">
+                            mm
+                        </span>
+
+                    </article>
+
+
+
+                    <article class="metric-card card">
+
+                        <span class="metric-label">
+                            Visibility
+                        </span>
+
+                        <strong
+                            id="visibility"
+                            class="metric-value"
+                        >
+                            —
+                        </strong>
+
+                        <span class="metric-unit">
+                            km
+                        </span>
+
+                    </article>
+
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 DECISION INTELLIGENCE
+            ================================================== -->
+
+            <section class="section">
+
+                <div class="section-title">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            DECISION INTELLIGENCE
+                        </span>
+
+                        <h2>
+                            Weather Risk Assessment
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="decision-grid">
+
+
+                    <!-- RISK SCORE -->
+
+                    <article
+                        id="decisionCard"
+                        class="decision-card card"
+                    >
+
+                        <div class="decision-header">
+
+                            <span class="metric-label">
+                                Overall Risk
+                            </span>
+
+                            <span
+                                id="riskLevel"
+                                class="risk-badge"
+                            >
+                                —
+                            </span>
+
+                        </div>
+
+
+                        <div class="risk-score">
+
+                            <strong id="riskScore">
+                                —
+                            </strong>
+
+                            <span>
+                                / 100
+                            </span>
+
+                        </div>
+
+
+                        <p id="riskTitle">
+                            —
+                        </p>
+
+                    </article>
+
+
+
+                    <!-- DECISION -->
+
+                    <article class="recommendation-card card">
+
+                        <div class="recommendation-header">
+
+                            <span class="decision-icon">
+                                ✓
+                            </span>
+
+                            <div>
+
+                                <span class="metric-label">
+                                    RECOMMENDATION
+                                </span>
+
+                                <h3 id="decisionTitle">
+                                    —
+                                </h3>
+
+                            </div>
+
+                        </div>
+
+
+                        <p id="decisionMessage">
+                            —
+                        </p>
+
+
+                        <div class="decision-meta">
+
+                            <div>
+
+                                <span>
+                                    Priority
+                                </span>
+
+                                <strong id="decisionPriority">
+                                    —
+                                </strong>
+
+                            </div>
+
+
+                            <div>
+
+                                <span>
+                                    Main Hazard
+                                </span>
+
+                                <strong id="decisionHazard">
+                                    —
+                                </strong>
+
+                            </div>
+
+                        </div>
+
+                    </article>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 RISK SUMMARY
+            ================================================== -->
+
+            <section class="section">
+
+                <div class="section-title">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            FORECAST ANALYSIS
+                        </span>
+
+                        <h2>
+                            Risk Window
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+
+                <div class="summary-grid">
+
+
+                    <article class="summary-card card">
+
+                        <span>
+                            Hours analyzed
+                        </span>
+
+                        <strong id="hoursAnalyzed">
+                            —
+                        </strong>
+
+                    </article>
+
+
+
+                    <article class="summary-card card">
+
+                        <span>
+                            Average risk
+                        </span>
+
+                        <strong id="averageRisk">
+                            —
+                        </strong>
+
+                    </article>
+
+
+
+                    <article class="summary-card card">
+
+                        <span>
+                            Peak risk
+                        </span>
+
+                        <strong id="peakRisk">
+                            —
+                        </strong>
+
+                    </article>
+
+
+
+                    <article class="summary-card card">
+
+                        <span>
+                            Risk trend
+                        </span>
+
+                        <strong id="riskTrend">
+                            —
+                        </strong>
+
+                    </article>
+
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 HOURLY RISK
+            ================================================== -->
+
+            <section class="section">
+
+                <div class="section-title">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            HOURLY ANALYSIS
+                        </span>
+
+                        <h2>
+                            Hour-by-Hour Risk
+                        </h2>
+
+                    </div>
+
+
+                    <span
+                        id="peakHazardBadge"
+                        class="source-badge"
+                    >
+                        —
+                    </span>
+
+                </div>
+
+
+
+                <div class="table-container card">
+
+                    <div class="table-scroll">
+
+                        <table>
+
+                            <thead>
+
+                                <tr>
+
+                                    <th>
+                                        Time
+                                    </th>
+
+                                    <th>
+                                        Risk
+                                    </th>
+
+                                    <th>
+                                        Level
+                                    </th>
+
+                                    <th>
+                                        Weather
+                                    </th>
+
+                                    <th>
+                                        Rain
+                                    </th>
+
+                                    <th>
+                                        Wind
+                                    </th>
+
+                                    <th>
+                                        Heat
+                                    </th>
+
+                                    <th>
+                                        Visibility
+                                    </th>
+
+                                    <th>
+                                        Hazard
+                                    </th>
+
+                                </tr>
+
+                            </thead>
+
+
+                            <tbody id="hourlyResultsBody">
+                            </tbody>
+
+                        </table>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 RISK EXPLANATION
+            ================================================== -->
+
+            <section class="section">
+
+                <article class="explanation-card card">
+
+                    <div class="explanation-icon">
+                        💡
+                    </div>
+
+                    <div>
+
+                        <span class="eyebrow">
+                            HOW THE DECISION WAS MADE
+                        </span>
+
+                        <h3>
+                            WeatherGPT combines multiple risk signals
+                        </h3>
+
+                        <p>
+                            The assessment considers forecast weather
+                            conditions, rainfall, wind, heat,
+                            visibility, weather hazards and the
+                            selected activity. The resulting score
+                            is used to generate an actionable
+                            recommendation.
+                        </p>
+
+                    </div>
+
+                </article>
+
+            </section>
+
+
+
+            <!-- =================================================
+                 WEATHERGPT AI EXPLANATION
+            ================================================== -->
+
+            <section class="section">
+
+                <div class="section-title">
+
+                    <div>
+
+                        <span class="eyebrow">
+                            WEATHERGPT AI
+                        </span>
+
+                        <h2>
+                            Ask WeatherGPT
+                        </h2>
+
+                    </div>
+
+                </div>
+
+
+
+                <article class="chat-card card">
+
+
+                    <!-- CHAT HEADER -->
+
+                    <div class="chat-header">
+
+                        <div class="chat-avatar">
+                            ☁
+                        </div>
+
+                        <div>
+
+                            <span class="metric-label">
+                                AI WEATHER ASSISTANT
+                            </span>
+
+                            <h3>
+                                WeatherGPT Explanation
+                            </h3>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <!-- CHAT DESCRIPTION -->
+
+                    <p class="chat-description">
+                        Ask WeatherGPT follow-up questions about the current weather,
+                        forecast, risk, or whether a later time looks better.
+                    </p>
+
+                    <div class="preferences-panel">
+                        <div class="preference-row">
+                            <label for="userNameInput">Your name (optional)</label>
+                            <input id="userNameInput" type="text" maxlength="100" placeholder="e.g. Nouman">
+                        </div>
+                        <div class="preference-row">
+                            <span class="preference-label">Preferred activities</span>
+                            <div class="preference-checks">
+                                <label><input type="checkbox" value="Walking" class="preferred-activity"> Walking</label>
+                                <label><input type="checkbox" value="Running" class="preferred-activity"> Running</label>
+                                <label><input type="checkbox" value="Cycling" class="preferred-activity"> Cycling</label>
+                                <label><input type="checkbox" value="Bike" class="preferred-activity"> Bike</label>
+                                <label><input type="checkbox" value="Driving" class="preferred-activity"> Driving</label>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <!-- CHAT INPUT -->
+
+                    <div class="chat-input-row">
+                        <input
+                            id="chatMessageInput"
+                            type="text"
+                            maxlength="4000"
+                            placeholder="Ask: Is it better to go later?"
+                            autocomplete="off"
+                        >
+                        <button id="sendChatButton" class="primary-button" type="button">Send</button>
+                    </div>
+
+                    <!-- CHAT ACTION -->
+
+                    <div class="chat-actions">
+
+                        <button
+                            id="askWeatherGPTButton"
+                            class="secondary-button"
+                            type="button"
+                        >
+                            Explain current assessment
+                        </button>
+                        <button
+                            id="clearChatButton"
+                            class="secondary-button"
+                            type="button"
+                        >
+                            New conversation
+                        </button>
+
+                    </div>
+
+
+
+                    <!-- CHAT LOADING -->
+
+                    <div
+                        id="chatLoadingState"
+                        class="chat-loading hidden"
+                    >
+
+                        WeatherGPT is preparing your explanation...
+
+                    </div>
+
+
+
+                    <!-- CHAT ERROR -->
+
+                    <div
+                        id="chatErrorMessage"
+                        class="error-message hidden"
+                    ></div>
+
+
+
+                    <!-- CHAT RESPONSE -->
+
+                    <div
+                        id="chatResponse"
+                        class="chat-response hidden"
+                    >
+
+
+                        <div class="chat-response-header">
+
+                            <span class="chat-response-icon">
+                                ☁
+                            </span>
+
+                            <div>
+
+                                <span class="metric-label">
+                                    WEATHERGPT
+                                </span>
+
+                                <h3>
+                                    AI Assessment
+                                </h3>
+
+                            </div>
+
+                        </div>
+
+
+
+                        <div
+                            id="chatExplanation"
+                            class="chat-explanation"
+                        ></div>
+
+                        <div id="conversationMessages" class="conversation-messages"></div>
+
+
+                    </div>
+
+
+                </article>
+
+            </section>
+
+
+        </div>
+
+    </main>
+
+
+
+    <!-- =========================================================
+         FOOTER
+    ========================================================== -->
+
+    <footer class="app-footer">
+
+        <p>
+            WeatherGPT · Hyperlocal Weather Risk &amp;
+            Decision Intelligence
+        </p>
+
+        <p>
+            Weather data powered by Open-Meteo
+        </p>
+
+    </footer>
+
+
+
+    <!-- =========================================================
+         JAVASCRIPT
+    ========================================================== -->
+
+    <script src="/static/js/dashboard.js"></script>
+
+
+</body>
+
+</html>
