@@ -10,6 +10,11 @@ from app.api.risk import router as risk_router
 from app.api.weather import router as weather_router
 from app.core.config import settings
 
+from app.core.database import Base, engine
+from app import models
+
+Base.metadata.create_all(bind=engine)
+
 
 # ============================================================
 # PATHS
