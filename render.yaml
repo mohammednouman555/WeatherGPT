@@ -1,4 +1,5 @@
 services:
+
   - type: web
     name: weathergpt
     runtime: python
@@ -35,7 +36,9 @@ services:
       - key: IMD_WARNING_BASE_URL
         value: https://mausam.imd.gov.in/api/warnings_district_api.php
 
+
 databases:
+
   - name: weathergpt-db
     databaseName: weathergpt
     user: weathergpt
