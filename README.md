@@ -1,6 +1,3 @@
-Absolutely. Below is the **complete `README.md` content in proper Markdown format**, ready to copy directly into your `README.md` file.
-
-````markdown
 # 🌦️ WeatherGPT
 
 ## AI-Powered Hyperlocal Weather Risk & Decision Intelligence Platform
@@ -1124,4 +1121,3 @@ An appropriate open-source license can be added if the project is later intended
 ### From "What is the weather?"
 
 ### To "What should I do because of the weather?"
-````
