@@ -22,7 +22,9 @@ services:
         value: gemini-3.1-flash-lite
 
       - key: DATABASE_URL
-        value: sqlite:///./weathergpt.db
+        fromDatabase:
+          name: weathergpt-db
+          property: connectionString
 
       - key: OPEN_METEO_BASE_URL
         value: https://api.open-meteo.com/v1/forecast
@@ -32,3 +34,9 @@ services:
 
       - key: IMD_WARNING_BASE_URL
         value: https://mausam.imd.gov.in/api/warnings_district_api.php
+
+databases:
+  - name: weathergpt-db
+    databaseName: weathergpt
+    user: weathergpt
+    plan: free
