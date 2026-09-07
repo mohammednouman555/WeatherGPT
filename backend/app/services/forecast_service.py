@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-from sqlalchemy.dialects.postgresql import insert
 
 from app.core.config import settings
 from app.core.exceptions import DataUnavailableError, ExternalServiceError
@@ -19,9 +19,20 @@ class ForecastService:
     def __init__(self):
         self.client = OpenMeteoClient()
 
+    # =========================================================
+    # SAFE VALUE HELPER
+    # =========================================================
+
     @staticmethod
     def _value(values: list, index: int):
-        return values[index] if index < len(values) else None
+        if index < len(values):
+            return values[index]
+
+        return None
+
+    # =========================================================
+    # CACHED FORECASTS
+    # =========================================================
 
     def _cached_forecasts(
         self,
@@ -29,7 +40,10 @@ class ForecastService:
         db: Session,
     ) -> list[Forecast]:
         now = datetime.utcnow()
-        cutoff = now - timedelta(hours=settings.fallback_max_age_hours)
+
+        cutoff = now - timedelta(
+            hours=settings.fallback_max_age_hours
+        )
 
         return (
             db.query(Forecast)
@@ -38,25 +52,34 @@ class ForecastService:
                 Forecast.source == self.SOURCE,
                 Forecast.generated_at >= cutoff,
             )
-            .order_by(Forecast.forecast_time.asc())
+            .order_by(
+                Forecast.forecast_time.asc()
+            )
             .all()
         )
+
+    # =========================================================
+    # GET HOURLY FORECAST
+    # =========================================================
 
     def get_hourly_forecast(
         self,
         location: Location,
         db: Session,
     ) -> list[Forecast]:
+
         try:
-            # ---------------------------------------------------------
-            # 1. Fetch fresh hourly forecast from Open-Meteo
-            # ---------------------------------------------------------
+            # -------------------------------------------------
+            # 1. FETCH FRESH FORECAST FROM OPEN-METEO
+            # -------------------------------------------------
+
             data = self.client.get_hourly_forecast(
                 latitude=location.latitude,
                 longitude=location.longitude,
             )
 
             hourly = data.get("hourly") or {}
+
             times = hourly.get("time") or []
 
             if not times:
@@ -66,13 +89,17 @@ class ForecastService:
 
             generated_at = datetime.utcnow()
 
-            # ---------------------------------------------------------
-            # 2. Prepare rows for PostgreSQL UPSERT
-            # ---------------------------------------------------------
+            # -------------------------------------------------
+            # 2. PREPARE DATABASE ROWS
+            # -------------------------------------------------
+
             rows = []
 
             for index, time_value in enumerate(times):
-                forecast_time = datetime.fromisoformat(time_value)
+
+                forecast_time = datetime.fromisoformat(
+                    time_value
+                )
 
                 weather_code = self._value(
                     hourly.get("weather_code", []),
@@ -122,7 +149,10 @@ class ForecastService:
                         ),
 
                         "precipitation_probability": self._value(
-                            hourly.get("precipitation_probability", []),
+                            hourly.get(
+                                "precipitation_probability",
+                                [],
+                            ),
                             index,
                         ),
 
@@ -149,49 +179,91 @@ class ForecastService:
                     "No hourly forecast data was prepared."
                 )
 
-            # ---------------------------------------------------------
-            # 3. PostgreSQL UPSERT
+            # -------------------------------------------------
+            # 3. POSTGRESQL UPSERT
+            # -------------------------------------------------
             #
-            # If:
-            #   (location_id, forecast_time, source)
-            # already exists:
-            #   UPDATE the existing row.
+            # IMPORTANT:
             #
-            # Otherwise:
-            #   INSERT a new row.
-            # ---------------------------------------------------------
+            # We DO NOT use:
+            #
+            # constraint="uq_forecast_location_time_source"
+            #
+            # because your Forecast model defines this as a
+            # UNIQUE INDEX rather than a named constraint.
+            #
+            # Instead we specify the conflict columns directly.
+            # -------------------------------------------------
+
             stmt = insert(Forecast).values(rows)
 
             stmt = stmt.on_conflict_do_update(
-                constraint="uq_forecast_location_time_source",
+                index_elements=[
+                    Forecast.location_id,
+                    Forecast.forecast_time,
+                    Forecast.source,
+                ],
                 set_={
                     "generated_at": stmt.excluded.generated_at,
-                    "temperature": stmt.excluded.temperature,
-                    "feels_like": stmt.excluded.feels_like,
-                    "humidity": stmt.excluded.humidity,
-                    "pressure": stmt.excluded.pressure,
-                    "wind_speed": stmt.excluded.wind_speed,
-                    "wind_direction": stmt.excluded.wind_direction,
-                    "rainfall": stmt.excluded.rainfall,
+
+                    "temperature": (
+                        stmt.excluded.temperature
+                    ),
+
+                    "feels_like": (
+                        stmt.excluded.feels_like
+                    ),
+
+                    "humidity": (
+                        stmt.excluded.humidity
+                    ),
+
+                    "pressure": (
+                        stmt.excluded.pressure
+                    ),
+
+                    "wind_speed": (
+                        stmt.excluded.wind_speed
+                    ),
+
+                    "wind_direction": (
+                        stmt.excluded.wind_direction
+                    ),
+
+                    "rainfall": (
+                        stmt.excluded.rainfall
+                    ),
+
                     "precipitation_probability": (
                         stmt.excluded.precipitation_probability
                     ),
-                    "visibility": stmt.excluded.visibility,
-                    "cloud_cover": stmt.excluded.cloud_cover,
-                    "weather_condition": stmt.excluded.weather_condition,
+
+                    "visibility": (
+                        stmt.excluded.visibility
+                    ),
+
+                    "cloud_cover": (
+                        stmt.excluded.cloud_cover
+                    ),
+
+                    "weather_condition": (
+                        stmt.excluded.weather_condition
+                    ),
                 },
             )
 
+            # -------------------------------------------------
+            # 4. EXECUTE UPSERT
+            # -------------------------------------------------
+
             db.execute(stmt)
+
             db.commit()
 
-            # ---------------------------------------------------------
-            # 4. Fetch the final rows from the database
-            #
-            # We query them again after the UPSERT so that both newly
-            # inserted and updated rows are returned as normal ORM
-            # Forecast objects.
-            # ---------------------------------------------------------
+            # -------------------------------------------------
+            # 5. FETCH FINAL FORECASTS
+            # -------------------------------------------------
+
             forecast_times = [
                 row["forecast_time"]
                 for row in rows
@@ -201,43 +273,74 @@ class ForecastService:
                 db.query(Forecast)
                 .filter(
                     Forecast.location_id == location.id,
+
                     Forecast.source == self.SOURCE,
-                    Forecast.forecast_time.in_(forecast_times),
+
+                    Forecast.forecast_time.in_(
+                        forecast_times
+                    ),
                 )
-                .order_by(Forecast.forecast_time.asc())
+                .order_by(
+                    Forecast.forecast_time.asc()
+                )
                 .all()
             )
 
             return forecasts
 
-        # -------------------------------------------------------------
-        # External weather service errors
-        # -------------------------------------------------------------
-        except (ExternalServiceError, OSError, TimeoutError):
+        # =====================================================
+        # EXTERNAL WEATHER SERVICE ERRORS
+        # =====================================================
+
+        except (
+            ExternalServiceError,
+            OSError,
+            TimeoutError,
+        ):
+
             db.rollback()
 
-            cached = self._cached_forecasts(location, db)
-
-            if cached:
-                return cached
-
-            raise DataUnavailableError(
-                "Hourly forecast is temporarily unavailable and no cached "
-                "forecast exists."
+            cached = self._cached_forecasts(
+                location,
+                db,
             )
 
-        # -------------------------------------------------------------
-        # Database errors
-        # -------------------------------------------------------------
-        except SQLAlchemyError:
-            db.rollback()
-
-            cached = self._cached_forecasts(location, db)
-
             if cached:
                 return cached
 
             raise DataUnavailableError(
-                "Hourly forecast could not be stored or retrieved from "
-                "the database, and no cached forecast exists."
+                "Hourly forecast is temporarily unavailable "
+                "and no cached forecast exists."
+            )
+
+        # =====================================================
+        # DATABASE ERRORS
+        # =====================================================
+
+        except SQLAlchemyError as exc:
+
+            db.rollback()
+
+            print(
+                f"DATABASE ERROR while storing hourly forecast "
+                f"for '{location.name}': {exc}"
+            )
+
+            cached = self._cached_forecasts(
+                location,
+                db,
+            )
+
+            if cached:
+                print(
+                    f"Using cached forecast for "
+                    f"'{location.name}'."
+                )
+
+                return cached
+
+            raise DataUnavailableError(
+                "Hourly forecast could not be stored or "
+                "retrieved from the database, and no cached "
+                "forecast exists."
             )
